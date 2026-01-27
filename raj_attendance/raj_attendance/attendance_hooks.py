@@ -80,15 +80,16 @@ def create_new_record(doc, method):
 		doc_deduct_salary.salary_component = "خصم الحوافز"
 		doc_deduct_salary.amount = amount_to_deduct
 		doc_deduct_salary.payroll_date = attendance_date
+		doc_deduct_salary.custom_attendance_record = doc.name
   
 		doc_deduct_salary.custom_reason_of_deduct_or_earn = f"Reason of Deduction (Late Check_In or Early Check_Out):\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : ${attendance_date}\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn = f"Came Late by ${late_minutes} Minutes\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Leave out Early by ${early_minutes} Minutes\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : ${shift_start}\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check in Time : ${check_in}\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : ${shift_end}\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : ${check_out}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : {attendance_date}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Came Late by {late_minutes} Minutes\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Leave out Early by {early_minutes} Minutes\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : {shift_start}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check in Time : {check_in}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : {shift_end}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : {check_out}\n\n"
 
 		doc_deduct_salary.insert()
 		
@@ -147,15 +148,16 @@ def create_new_record(doc, method):
 			doc_deduct_salary.salary_component = "خصم الحوافز"
 			doc_deduct_salary.amount = amount_to_deduct
 			doc_deduct_salary.payroll_date = attendance_date
+			doc_deduct_salary.custom_attendance_record = doc.name
 
 			doc_deduct_salary.custom_reason_of_deduct_or_earn = f"Reason of Deduction (Late Check_In or Early Check_Out):\n\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : ${attendance_date}\n\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn = f"Came Late by ${late_minutes} Minutes\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Leave out Early by ${early_minutes} Minutes\n\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : ${shift_start}\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check in Time : ${check_in}\n\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : ${shift_end}\n"
-			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : ${check_out}\n\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : {attendance_date}\n\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Came Late by {late_minutes} Minutes\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Leave out Early by {early_minutes} Minutes\n\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : {shift_start}\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check in Time : {check_in}\n\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : {shift_end}\n"
+			doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : {check_out}\n\n"
    
 			doc_deduct_salary.insert()
 			

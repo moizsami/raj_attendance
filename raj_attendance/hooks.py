@@ -151,6 +151,7 @@ doc_events = {
     "Attendance": {
         "after_insert": "raj_attendance.raj_attendance.attendance_hooks.create_new_record",
         "before_insert": "raj_attendance.raj_attendance.bonus_time.calc_bonus",
+        "before_cancel": "raj_attendance.raj_attendance.attendance_cancel.remove_late_on_cancel",
     },
     "Employee Advance": {
         "validate": "raj_attendance.raj_attendance.employee_advance_validation.validate_employee_advance"

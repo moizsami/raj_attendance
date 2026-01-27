@@ -17,7 +17,8 @@ def calc_bonus(doc, method):
 
 	shift_seconds = time_diff_in_seconds(shift_end, shift_start)
 	shift_hours = round(shift_seconds / 3600, 1)
-
+ 
+	bonus_hours = 0
 	bonus_seconds = time_diff_in_seconds(check_out, shift_end)
 	if bonus_seconds > 0:
 		bonus_hours = bonus_seconds / 3600
@@ -78,12 +79,21 @@ def calc_bonus(doc, method):
 		doc_deduct_salary.salary_component = "الحوافز"
 		doc_deduct_salary.amount = amount_of_bonus
 		doc_deduct_salary.payroll_date = attendance_date
+		doc_deduct_salary.custom_attendance_record = doc.name
   
 		doc_deduct_salary.custom_reason_of_deduct_or_earn = f"Reason of Earning (Working Over Time):\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : ${attendance_date}\n\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : ${shift_start}\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : ${shift_end}\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : ${check_out}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Attendance Date : {attendance_date}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Over Time Hours (Before 9pm): {hours_before_9}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Over Time Hours (After 9pm): {hours_after_9}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"All Over Time Hours: {hours_before_9 + hours_after_9}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Base Salary : {round(doc_latest_assignment.base,2)}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Payment Days : {doc_latest_assignment.custom_payment_days}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Amount of Hour: {round(amount_of_hour,2)}\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus Before 9pm : 1.35\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus After 9pm : 1.7\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : {shift_start}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : {shift_end}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : {check_out}\n\n"
   
 		doc_deduct_salary.insert()
 		
