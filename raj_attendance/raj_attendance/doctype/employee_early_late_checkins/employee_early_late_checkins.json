@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:{employee_id}:{month_start_date}",
+ "creation": "2026-01-20 11:51:25.727480",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "total_minutes",
+  "column_break_gqbj",
+  "status",
+  "section_break_wxyj",
+  "employee_id",
+  "employee_name",
+  "column_break_qozz",
+  "month_start_date",
+  "month_end_date",
+  "section_break_tecr",
+  "lates"
+ ],
+ "fields": [
+  {
+   "fieldname": "total_minutes",
+   "fieldtype": "Int",
+   "label": "Total Minutes"
+  },
+  {
+   "fieldname": "section_break_wxyj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "employee_id",
+   "fieldtype": "Link",
+   "label": "Employee ID",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name"
+  },
+  {
+   "fieldname": "column_break_qozz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "month_start_date",
+   "fieldtype": "Date",
+   "label": "Month Start Date"
+  },
+  {
+   "fieldname": "month_end_date",
+   "fieldtype": "Date",
+   "label": "Month End Date"
+  },
+  {
+   "fieldname": "section_break_tecr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "lates",
+   "fieldtype": "Table",
+   "label": "Lates",
+   "options": "Employee Month Checkin"
+  },
+  {
+   "fieldname": "column_break_gqbj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nmonthly limit exceeded"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-22 18:46:47.413694",
+ "modified_by": "Administrator",
+ "module": "Raj Attendance",
+ "name": "Employee Early Late Checkins",
+ "naming_rule": "Expression",
+ "owner": "mshanab@samtech.me",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

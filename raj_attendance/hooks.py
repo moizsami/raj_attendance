@@ -137,13 +137,27 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [
+            ["module", "=", "Raj Attendance"]
+        ]
+    }
+]
+
+
+doc_events = {
+    "Attendance": {
+        "after_insert": "raj_attendance.raj_attendance.attendance_hooks.create_new_record",
+        "before_insert": "raj_attendance.raj_attendance.bonus_time.calc_bonus",
+    },
+    "Employee Advance": {
+        "validate": "raj_attendance.raj_attendance.employee_advance_validation.validate_employee_advance"
+    }
+}
+
+
 
 # Scheduled Tasks
 # ---------------
