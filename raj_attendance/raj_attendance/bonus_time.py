@@ -1,6 +1,6 @@
 import frappe
 from frappe.utils import time_diff_in_seconds
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def calc_bonus(doc, method):
 	if not doc.in_time:
@@ -13,7 +13,10 @@ def calc_bonus(doc, method):
 	attendance_date = doc.attendance_date
 	shift_start = datetime.strptime(f"{attendance_date} {shift_start_time}", "%Y-%m-%d %H:%M:%S")
 	shift_end   = datetime.strptime(f"{attendance_date} {shift_end_time}", "%Y-%m-%d %H:%M:%S")
-	check_out = doc.out_time  
+	# For night shifts where end time is next day (e.g. 20:30 -> 08:30)
+	if shift_end <= shift_start:
+		shift_end += timedelta(days=1)
+	check_out = doc.out_time
 
 	shift_seconds = time_diff_in_seconds(shift_end, shift_start)
 	shift_hours = round(shift_seconds / 3600, 1)
@@ -45,8 +48,9 @@ def calc_bonus(doc, method):
 				frappe.throw("No submitted Salary Structure Assignment found for this Employee")
 		#############################################################
 
-		amount_per_day = doc_latest_assignment.base / doc_latest_assignment.custom_payment_days
-		
+		payment_days = doc_latest_assignment.custom_payment_days or 30
+		amount_per_day = doc_latest_assignment.base / payment_days
+
 		amount_of_hour = amount_per_day / shift_hours
 
 		nine_pm = datetime.strptime(f"{attendance_date} 21:00:00", "%Y-%m-%d %H:%M:%S")
@@ -87,7 +91,7 @@ def calc_bonus(doc, method):
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Over Time Hours (After 9pm): {hours_after_9}\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"All Over Time Hours: {hours_before_9 + hours_after_9}\n\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Base Salary : {round(doc_latest_assignment.base,2)}\n"
-		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Payment Days : {doc_latest_assignment.custom_payment_days}\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Payment Days : {payment_days}\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Amount of Hour: {round(amount_of_hour,2)}\n\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus Before 9pm : 1.35\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus After 9pm : 1.7\n\n"
