@@ -63,7 +63,8 @@ def create_new_record(doc, method):
 				frappe.throw("No submitted Salary Structure Assignment found for this Employee")
 		#############################################################
 		
-		amount_per_day = doc_latest_assignment.base / doc_latest_assignment.custom_payment_days
+		payment_days = doc_latest_assignment.custom_payment_days or 30
+		amount_per_day = doc_latest_assignment.base / payment_days
 		# if doc_latest_assignment.salary_structure == "Admin Monthly 2025":
 		# 	amount_per_day = doc_latest_assignment.base / 30
 		# if doc_latest_assignment.salary_structure == "Workers Monthly 2025 v2":
@@ -131,7 +132,8 @@ def create_new_record(doc, method):
 					frappe.throw("No submitted Salary Structure Assignment found for this Employee")
 			#############################################################
 			
-			amount_per_day = doc_latest_assignment.base / doc_latest_assignment.custom_payment_days
+			payment_days = doc_latest_assignment.custom_payment_days or 30
+		amount_per_day = doc_latest_assignment.base / payment_days
 			# if doc_latest_assignment.salary_structure == "Admin Monthly 2025":
 			# 	amount_per_day = doc_latest_assignment.base / 30
 			# if doc_latest_assignment.salary_structure == "Workers Monthly 2025 v2":
