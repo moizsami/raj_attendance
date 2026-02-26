@@ -106,7 +106,7 @@ def _get_salary_structure_assignment(employee, as_of_date):
     # Following pattern from overtime_calculation.py
     rows = frappe.db.sql(
         """
-        SELECT base, COALESCE(custom_payment_days, %s) AS custom_payment_days
+        SELECT base, COALESCE(custom_payment_days, %s) AS custom_payment_days, custom_badal_wagba
         FROM `tabSalary Structure Assignment`
         WHERE employee = %s AND docstatus = 1 AND from_date <= %s
         ORDER BY from_date DESC
@@ -121,7 +121,8 @@ def _get_salary_structure_assignment(employee, as_of_date):
 
     return {
         "base": flt(rows[0].get("base")),
-        "custom_payment_days": flt(rows[0].get("custom_payment_days")) or DEFAULT_PAYMENT_DAYS
+        "custom_payment_days": flt(rows[0].get("custom_payment_days")) or DEFAULT_PAYMENT_DAYS,
+        "custom_badal_wagba": flt(rows[0].get("custom_badal_wagba"))
     }
 
 
@@ -278,9 +279,9 @@ def _validate_worker_60_percent(doc):
             title=_("Salary Structure Assignment Required") + " / تعيين هيكل الراتب مطلوب"
         )
 
-    daily_rate = ssa.get("base")
+    base = ssa.get("base")
 
-    if not daily_rate or daily_rate <= 0:
+    if not base or base <= 0:
         frappe.throw(
             _("Salary Structure Assignment has no base salary defined for employee {0}").format(doc.employee)
             + "<br><br>"
@@ -288,8 +289,11 @@ def _validate_worker_60_percent(doc):
             title=_("Base Salary Required") + " / الراتب الأساسي مطلوب"
         )
 
+    badal_wagba = ssa.get("custom_badal_wagba")
+    daily_rate = flt(base) + flt(badal_wagba)
+
     # Calculate total earned and 60% allowance
-    total_earned = flt(daily_rate) * flt(present_days)
+    total_earned = daily_rate * flt(present_days)
     allowed_advance = flt(total_earned * 0.60, 2)
 
     # Get existing advances for this month
