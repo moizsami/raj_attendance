@@ -5,6 +5,7 @@ from frappe.utils import flt, getdate, get_first_day, get_last_day, today
 # Constants for Solaf Types
 SOLAF_TYPE_60_PERCENT = "60% of Salary"
 SOLAF_TYPE_1500_AFTER_7_DAYS = "1500 after 7 days"
+SOLAF_TYPE_WORKER_60_PERCENT = "Worker 60%"
 
 # Constants for 1500-after-7-days brackets
 ADVANCE_PER_7_DAYS = 1500
@@ -39,6 +40,8 @@ def validate_employee_advance(doc, method=None):
         _validate_60_percent_salary(doc)
     elif solaf_type == SOLAF_TYPE_1500_AFTER_7_DAYS:
         _validate_1500_after_7_days(doc)
+    elif solaf_type == SOLAF_TYPE_WORKER_60_PERCENT:
+        _validate_worker_60_percent(doc)
     # If unknown solaf_type, no validation applied
 
 
@@ -227,6 +230,104 @@ def _validate_60_percent_salary(doc):
             + _("Remaining Allowance: {0}").format(frappe.format_value(remaining, {"fieldtype": "Currency"})) + "<br><br>"
             + "تجاوزت السلفة الحد المسموح به." + "<br><br>"
             + "الأيام المنقضية في الشهر: {0}".format(days_passed) + "<br>"
+            + "السلفة المسموحة (60%): {0}".format(frappe.format_value(allowed_advance, {"fieldtype": "Currency"})) + "<br>"
+            + "السلف الحالية هذا الشهر: {0}".format(frappe.format_value(existing_advance, {"fieldtype": "Currency"})) + "<br>"
+            + "السلفة الحالية: {0}".format(frappe.format_value(flt(doc.advance_amount), {"fieldtype": "Currency"})) + "<br>"
+            + "الإجمالي: {0}".format(frappe.format_value(total_advance, {"fieldtype": "Currency"})) + "<br>"
+            + "المتبقي المسموح: {0}".format(frappe.format_value(remaining, {"fieldtype": "Currency"})),
+            title=_("Advance Limit Exceeded") + " / تجاوز حد السلفة"
+        )
+
+
+def _validate_worker_60_percent(doc):
+    """
+    Validation logic for 'Worker 60%' solaf type.
+
+    For daily-wage workers whose Salary Structure Assignment 'base' is a daily rate.
+    Allowed advance = base (daily rate) × present days up to today × 60%.
+    Only attendance records with attendance_date <= today() are counted to prevent
+    future-dated records from inflating the eligible amount.
+
+    Args:
+        doc: Employee Advance document
+
+    Raises:
+        frappe.ValidationError: If advance exceeds allowed amount
+    """
+    posting_date = getdate(doc.posting_date)
+
+    # Always use actual today to prevent manipulation via future posting_date
+    current_date = getdate(today())
+    month_start = get_first_day(posting_date)
+    month_end = get_last_day(posting_date)
+
+    # Cap attendance lookup at today — ignore future-dated attendance records
+    attendance_end = min(month_end, current_date)
+
+    # Count present days from month start up to (and including) today
+    present_days = _get_present_days_count(doc.employee, month_start, attendance_end)
+
+    # Get SSA — base is the daily rate for these workers
+    ssa = _get_salary_structure_assignment(doc.employee, posting_date)
+
+    if not ssa:
+        frappe.throw(
+            _("No submitted Salary Structure Assignment found for employee {0}").format(doc.employee)
+            + "<br><br>"
+            + "لم يتم العثور على تعيين هيكل الراتب المعتمد للموظف {0}".format(doc.employee),
+            title=_("Salary Structure Assignment Required") + " / تعيين هيكل الراتب مطلوب"
+        )
+
+    daily_rate = ssa.get("base")
+
+    if not daily_rate or daily_rate <= 0:
+        frappe.throw(
+            _("Salary Structure Assignment has no base salary defined for employee {0}").format(doc.employee)
+            + "<br><br>"
+            + "لم يتم تحديد الراتب الأساسي في تعيين هيكل الراتب للموظف {0}".format(doc.employee),
+            title=_("Base Salary Required") + " / الراتب الأساسي مطلوب"
+        )
+
+    # Calculate total earned and 60% allowance
+    total_earned = flt(daily_rate) * flt(present_days)
+    allowed_advance = flt(total_earned * 0.60, 2)
+
+    # Get existing advances for this month
+    existing_advance = _get_existing_advance_amount_for_month(
+        doc.employee,
+        posting_date,
+        exclude_name=doc.name if not doc.is_new() else None
+    )
+
+    # Calculate total with current advance
+    total_advance = flt(existing_advance) + flt(doc.advance_amount)
+
+    if total_advance > allowed_advance:
+        remaining = flt(allowed_advance - existing_advance, 2)
+        remaining = max(0, remaining)
+
+        frappe.throw(
+            _("Employee Advance exceeds the allowed limit.") + "<br><br>"
+            + _("Total Worked Days: {0}").format(present_days) + "<br>"
+            + _("Daily Rate (Base): {0}").format(frappe.format_value(daily_rate, {"fieldtype": "Currency"})) + "<br>"
+            + _("Total Earned ({0} days × {1}): {2}").format(
+                present_days,
+                frappe.format_value(daily_rate, {"fieldtype": "Currency"}),
+                frappe.format_value(total_earned, {"fieldtype": "Currency"})
+            ) + "<br>"
+            + _("Allowed Advance (60%): {0}").format(frappe.format_value(allowed_advance, {"fieldtype": "Currency"})) + "<br>"
+            + _("Existing Advances this Month: {0}").format(frappe.format_value(existing_advance, {"fieldtype": "Currency"})) + "<br>"
+            + _("Current Advance: {0}").format(frappe.format_value(flt(doc.advance_amount), {"fieldtype": "Currency"})) + "<br>"
+            + _("Total: {0}").format(frappe.format_value(total_advance, {"fieldtype": "Currency"})) + "<br>"
+            + _("Remaining Allowance: {0}").format(frappe.format_value(remaining, {"fieldtype": "Currency"})) + "<br><br>"
+            + "تجاوزت السلفة الحد المسموح به." + "<br><br>"
+            + "إجمالي أيام العمل: {0}".format(present_days) + "<br>"
+            + "المعدل اليومي (الأساسي): {0}".format(frappe.format_value(daily_rate, {"fieldtype": "Currency"})) + "<br>"
+            + "الإجمالي المكتسب ({0} أيام × {1}): {2}".format(
+                present_days,
+                frappe.format_value(daily_rate, {"fieldtype": "Currency"}),
+                frappe.format_value(total_earned, {"fieldtype": "Currency"})
+            ) + "<br>"
             + "السلفة المسموحة (60%): {0}".format(frappe.format_value(allowed_advance, {"fieldtype": "Currency"})) + "<br>"
             + "السلف الحالية هذا الشهر: {0}".format(frappe.format_value(existing_advance, {"fieldtype": "Currency"})) + "<br>"
             + "السلفة الحالية: {0}".format(frappe.format_value(flt(doc.advance_amount), {"fieldtype": "Currency"})) + "<br>"

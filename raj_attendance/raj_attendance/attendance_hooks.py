@@ -21,6 +21,8 @@ def create_new_record(doc, method):
 		existed = False
   
 	shift_doc = frappe.get_doc("Shift Type", doc.shift)
+	if shift_doc.custom_pause_attendance:
+		return
 	shift_start_time = shift_doc.start_time
 	shift_end_time   = shift_doc.end_time
 	attendance_date = doc.attendance_date
@@ -29,6 +31,9 @@ def create_new_record(doc, method):
 	check_in = doc.in_time
 	check_out = doc.out_time
  
+	if not shift_doc.custom_late_and_early_deduction_type:
+		return
+
 	if shift_doc.custom_late_and_early_deduction_type == "Deduct":
 		late_seconds = time_diff_in_seconds(check_in, shift_start)
 		late_minutes = 0
@@ -133,7 +138,7 @@ def create_new_record(doc, method):
 			#############################################################
 			
 			payment_days = doc_latest_assignment.custom_payment_days or 30
-		amount_per_day = doc_latest_assignment.base / payment_days
+			amount_per_day = doc_latest_assignment.base / payment_days
 			# if doc_latest_assignment.salary_structure == "Admin Monthly 2025":
 			# 	amount_per_day = doc_latest_assignment.base / 30
 			# if doc_latest_assignment.salary_structure == "Workers Monthly 2025 v2":

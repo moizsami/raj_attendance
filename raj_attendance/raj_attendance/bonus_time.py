@@ -8,6 +8,8 @@ def calc_bonus(doc, method):
 	if not doc.out_time:
 		return
 	shift_doc = frappe.get_doc("Shift Type", doc.shift)
+	if shift_doc.custom_pause_overtime:
+		return
 	shift_start_time = shift_doc.start_time
 	shift_end_time   = shift_doc.end_time
 	attendance_date = doc.attendance_date
