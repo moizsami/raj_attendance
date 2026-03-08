@@ -83,7 +83,14 @@ def create_new_record(doc, method):
 
 		doc_deduct_salary = frappe.new_doc("Additional Salary")
 		doc_deduct_salary.employee = doc.employee
-		doc_deduct_salary.salary_component = "خصم الحوافز"
+  
+		salary_component_value = ""
+		if shift_doc.custom_late_and_early_deduction_type == "Deduct":
+			salary_component_value = "worker Deduction -Late Arrive / Early Left"
+		else:
+			salary_component_value = "Admin Deduction -Late Arrive / Early Left"
+		doc_deduct_salary.salary_component = salary_component_value
+
 		doc_deduct_salary.amount = amount_to_deduct
 		doc_deduct_salary.payroll_date = attendance_date
 		doc_deduct_salary.custom_attendance_record = doc.name
@@ -152,7 +159,14 @@ def create_new_record(doc, method):
 
 			doc_deduct_salary = frappe.new_doc("Additional Salary")
 			doc_deduct_salary.employee = doc.employee
-			doc_deduct_salary.salary_component = "خصم الحوافز"
+
+			salary_component_value = ""
+			if shift_doc.custom_late_and_early_deduction_type == "Deduct":
+				salary_component_value = "worker Deduction -Late Arrive / Early Left"
+			else:
+				salary_component_value = "Admin Deduction -Late Arrive / Early Left"
+			doc_deduct_salary.salary_component = salary_component_value
+
 			doc_deduct_salary.amount = amount_to_deduct
 			doc_deduct_salary.payroll_date = attendance_date
 			doc_deduct_salary.custom_attendance_record = doc.name

@@ -65,7 +65,14 @@ def double_salary(doc, method):
 
 	doc_additional = frappe.new_doc("Additional Salary")
 	doc_additional.employee          = doc.employee
-	doc_additional.salary_component  = "الحوافز"
+ 
+	salary_component_value = ""
+	if shift_doc.custom_late_and_early_deduction_type == "Deduct":
+		salary_component_value = "Bonus Worker"
+	else:
+		salary_component_value = "admin/ Rewards and incentives"
+	doc_additional.salary_component  = salary_component_value
+ 
 	doc_additional.amount            = amount
 	doc_additional.payroll_date      = attendance_date
 	doc_additional.custom_attendance_record = doc.name

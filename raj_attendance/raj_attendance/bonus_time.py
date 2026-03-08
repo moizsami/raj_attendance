@@ -82,7 +82,14 @@ def calc_bonus(doc, method):
 
 		doc_deduct_salary = frappe.new_doc("Additional Salary")
 		doc_deduct_salary.employee = doc.employee
-		doc_deduct_salary.salary_component = "الحوافز"
+  
+		salary_component_value = ""
+		if shift_doc.custom_late_and_early_deduction_type == "Deduct":
+			salary_component_value = "Over Time / WORKERS"
+		else:
+			salary_component_value = "Over Time / ADMIN"
+		doc_deduct_salary.salary_component = salary_component_value
+
 		doc_deduct_salary.amount = amount_of_bonus
 		doc_deduct_salary.payroll_date = attendance_date
 		doc_deduct_salary.custom_attendance_record = doc.name
