@@ -85,7 +85,7 @@ def _get_present_days_count(employee, start_date, end_date):
         filters={
             "employee": employee,
             "attendance_date": ["between", [start_date, end_date]],
-            "status": "Present",
+            "status": ["in", ["Present", "Work From Home"]],
             "docstatus": 1  # Submitted only
         }
     )

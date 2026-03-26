@@ -149,8 +149,10 @@ fixtures = [
 
 doc_events = {
     "Attendance": {
-        "after_insert": "raj_attendance.raj_attendance.attendance_hooks.create_new_record",
-        "after_insert": "raj_attendance.raj_attendance.double_holidays.double_salary",
+        "after_insert": [
+            "raj_attendance.raj_attendance.attendance_hooks.create_new_record",
+            "raj_attendance.raj_attendance.double_holidays.double_salary"
+        ],
         "before_insert": "raj_attendance.raj_attendance.bonus_time.calc_bonus",
         "before_cancel": "raj_attendance.raj_attendance.attendance_cancel.remove_late_on_cancel",
     },
