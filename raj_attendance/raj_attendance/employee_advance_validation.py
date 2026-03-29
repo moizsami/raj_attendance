@@ -68,18 +68,7 @@ def _get_employee_shift_type(employee):
 
 
 def _get_present_days_count(employee, start_date, end_date):
-    """
-    Count submitted Attendance records with status 'Present' for employee
-    within the date range.
 
-    Args:
-        employee: Employee ID
-        start_date: Start of period
-        end_date: End of period
-
-    Returns:
-        int: Count of present days
-    """
     count = frappe.db.count(
         "Attendance",
         filters={
@@ -93,17 +82,8 @@ def _get_present_days_count(employee, start_date, end_date):
 
 
 def _get_salary_structure_assignment(employee, as_of_date):
-    """
-    Get the latest submitted Salary Structure Assignment for the employee.
 
-    Args:
-        employee: Employee ID
-        as_of_date: Date to check against (typically posting_date)
-
-    Returns:
-        dict: {'base': float, 'custom_payment_days': float} or None
-    """
-    # Following pattern from overtime_calculation.py
+    
     rows = frappe.db.sql(
         """
         SELECT base, COALESCE(custom_payment_days, %s) AS custom_payment_days, custom_badal_wagba
@@ -127,18 +107,7 @@ def _get_salary_structure_assignment(employee, as_of_date):
 
 
 def _get_existing_advance_amount_for_month(employee, posting_date, exclude_name=None):
-    """
-    Sum of advance_amount from all SUBMITTED Employee Advance records
-    for the same month as posting_date.
-
-    Args:
-        employee: Employee ID
-        posting_date: Date to determine the month
-        exclude_name: Document name to exclude (current document if being edited)
-
-    Returns:
-        float: Total existing advance amount
-    """
+ 
     posting_date = getdate(posting_date)
     month_start = get_first_day(posting_date)
     month_end = get_last_day(posting_date)
@@ -161,15 +130,7 @@ def _get_existing_advance_amount_for_month(employee, posting_date, exclude_name=
 
 
 def _validate_60_percent_salary(doc):
-    """
-    Validation logic for '60% of Salary' solaf type.
 
-    Args:
-        doc: Employee Advance document
-
-    Raises:
-        frappe.ValidationError: If advance exceeds allowed amount
-    """
     posting_date = getdate(doc.posting_date)
 
     # Use the actual current date (today) to determine days passed,
@@ -241,20 +202,7 @@ def _validate_60_percent_salary(doc):
 
 
 def _validate_worker_60_percent(doc):
-    """
-    Validation logic for 'Worker 60%' solaf type.
 
-    For daily-wage workers whose Salary Structure Assignment 'base' is a daily rate.
-    Allowed advance = base (daily rate) × present days up to today × 60%.
-    Only attendance records with attendance_date <= today() are counted to prevent
-    future-dated records from inflating the eligible amount.
-
-    Args:
-        doc: Employee Advance document
-
-    Raises:
-        frappe.ValidationError: If advance exceeds allowed amount
-    """
     posting_date = getdate(doc.posting_date)
 
     # Always use actual today to prevent manipulation via future posting_date
@@ -342,15 +290,7 @@ def _validate_worker_60_percent(doc):
 
 
 def _validate_1500_after_7_days(doc):
-    """
-    Validation logic for '1500 after 7 days' solaf type.
 
-    Args:
-        doc: Employee Advance document
-
-    Raises:
-        frappe.ValidationError: If advance exceeds allowed amount based on attendance brackets
-    """
     # Check per-request limit first
     if flt(doc.advance_amount) > ADVANCE_PER_7_DAYS:
         frappe.throw(
@@ -443,22 +383,7 @@ def _validate_1500_after_7_days(doc):
 
 
 def _get_allowed_advance_for_bracket(present_days):
-    """
-    Calculate allowed advance amount based on attendance bracket.
-
-    Rules:
-        - 0-6 days: 0 (not eligible)
-        - 7-13 days: 1500
-        - 14-20 days: 3000
-        - 21-27 days: 4500
-        - etc. (1500 per complete 7-day bracket)
-
-    Args:
-        present_days: Number of present days
-
-    Returns:
-        float: Maximum allowed advance amount
-    """
+   
     if present_days < DAYS_PER_BRACKET:  # 0-6 days
         return 0
 
