@@ -2,9 +2,16 @@ import frappe
 from frappe.utils import getdate
 
 DAILY_WORKER_SHIFTS = {
+	"Daily Worker 12 Hours Night Shift",
+	"Daily Worker 8 and Half Hours",
 	"Daily Worker 12 Hours Shift",
-	"Daily Worker 8 Hours Shift",
 }
+
+@frappe.whitelist()
+def run_double_salary(attendance_name):
+	doc = frappe.get_doc("Attendance", attendance_name)
+	double_salary(doc, method=None)
+	return "ok"
 
 def double_salary(doc, method):
 	if doc.status != "Present":
@@ -43,18 +50,22 @@ def double_salary(doc, method):
 	ssa = latest_assignment[0]
 
 	shift = doc.shift or ""
-
+ 
+	daily_rate = 0
+	payment_days = ssa.custom_payment_days or 30
+	base = ssa.base or 0
+ 
 	if shift in DAILY_WORKER_SHIFTS:
-		base = ssa.base or 0
-		badal_wagba = ssa.custom_badal_wagba or 0
-		daily_rate = base + badal_wagba
+		# badal_wagba = ssa.custom_badal_wagba or 0
+		daily_rate = base
 	else:
-		base = ssa.base or 0
-		payment_days = ssa.custom_payment_days or 30
 		daily_rate = base / payment_days
 
 	double_daily_rate = daily_rate * 2
 	amount = round(double_daily_rate, 2)
+
+	if amount <= 0:
+		frappe.throw(f"Cannot create double pay record: calculated amount is 0 for employee {doc.employee}")
 
 	# Determine reason label
 	day_name = attendance_date.strftime("%A")
@@ -78,13 +89,14 @@ def double_salary(doc, method):
 	doc_additional.custom_attendance_record = doc.name
 
 	doc_additional.custom_reason_of_deduct_or_earn  = f"Reason of Earning (Holiday / Friday Double Pay):\n\n"
-	doc_additional.custom_reason_of_deduct_or_earn += f"Attendance Date : {attendance_date}  ({day_name} – {day_reason})\n\n"
+	doc_additional.custom_reason_of_deduct_or_earn += f"Attendance Date : {attendance_date}  ({day_name} - {day_reason})\n\n"
 
 	if shift in DAILY_WORKER_SHIFTS:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"
-		doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
-		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base + Badal & Wagba) : {round(daily_rate, 2)}\n\n"
+		# doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
+		# doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base + Badal & Wagba) : {round(daily_rate, 2)}\n\n"
+		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base) : {round(daily_rate, 2)}\n\n"
 	else:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift or 'Admin'}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"

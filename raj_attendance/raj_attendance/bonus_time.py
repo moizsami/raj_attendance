@@ -2,6 +2,18 @@ import frappe
 from frappe.utils import time_diff_in_seconds
 from datetime import datetime, timedelta
 
+DAILY_WORKER_SHIFTS = {
+	"Daily Worker 12 Hours Night Shift",
+	"Daily Worker 8 and Half Hours",
+	"Daily Worker 12 Hours Shift",
+}
+
+@frappe.whitelist()
+def run_calc_bonus(attendance_name):
+	doc = frappe.get_doc("Attendance", attendance_name)
+	calc_bonus(doc, method=None)
+	return "ok"
+  
 def calc_bonus(doc, method):
 	if not doc.in_time:
 		return
@@ -29,7 +41,7 @@ def calc_bonus(doc, method):
 		bonus_hours = bonus_seconds / 3600
 		doc.custom_bonus_time = round(bonus_hours, 1)
 		
-	if bonus_hours > 1 :
+	if bonus_hours >= 1 :
 		# Get Salary
 		#################################################
 		latest_assignment = frappe.get_all(
@@ -50,8 +62,17 @@ def calc_bonus(doc, method):
 				frappe.throw("No submitted Salary Structure Assignment found for this Employee")
 		#############################################################
 
+		
+
+		amount_per_day = 0
 		payment_days = doc_latest_assignment.custom_payment_days or 30
-		amount_per_day = doc_latest_assignment.base / payment_days
+  
+		if doc.shift in DAILY_WORKER_SHIFTS:
+			amount_per_day = doc_latest_assignment.base
+		else:
+			amount_per_day = doc_latest_assignment.base / payment_days
+   
+
 
 		amount_of_hour = amount_per_day / shift_hours
 
@@ -79,6 +100,9 @@ def calc_bonus(doc, method):
 			(hours_after_9 * amount_of_hour * 1.70)
 		)
 		amount_of_bonus = round(amount_of_bonus, 2)
+  
+		if amount_of_bonus <= 0:
+			return
 
 		doc_deduct_salary = frappe.new_doc("Additional Salary")
 		doc_deduct_salary.employee = doc.employee
@@ -88,6 +112,15 @@ def calc_bonus(doc, method):
 			salary_component_value = "Over Time / WORKERS"
 		else:
 			salary_component_value = "Over Time / ADMIN"
+   
+		existing = frappe.db.exists("Additional Salary", {
+			"custom_attendance_record": doc.name,
+			"salary_component": salary_component_value,
+			"docstatus": ["!=", 2]
+		})
+		if existing:
+			return  # Already created, skip
+  
 		doc_deduct_salary.salary_component = salary_component_value
 
 		doc_deduct_salary.amount = amount_of_bonus
@@ -104,6 +137,7 @@ def calc_bonus(doc, method):
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Amount of Hour: {round(amount_of_hour,2)}\n\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus Before 9pm : 1.35\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Bonus After 9pm : 1.7\n\n"
+		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift : {doc.shift}\n\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift Start Time : {shift_start}\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Shift End Time : {shift_end}\n"
 		doc_deduct_salary.custom_reason_of_deduct_or_earn += f"Check out Time : {check_out}\n\n"
