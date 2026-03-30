@@ -68,7 +68,7 @@ def calc_bonus(doc, method):
 		payment_days = doc_latest_assignment.custom_payment_days or 30
   
 		if doc.shift in DAILY_WORKER_SHIFTS:
-			amount_per_day = doc_latest_assignment.base
+			return
 		else:
 			amount_per_day = doc_latest_assignment.base / payment_days
    

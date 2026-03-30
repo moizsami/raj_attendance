@@ -16,10 +16,10 @@ def run_double_salary(attendance_name):
 def double_salary(doc, method):
 	if doc.status != "Present":
 		return
-	if not doc.in_time:
-		return
-	if not doc.out_time:
-		return
+	# if not doc.in_time:
+	# 	return
+	# if not doc.out_time:
+	# 	return
 	if not doc.attendance_date:
 		return
 
