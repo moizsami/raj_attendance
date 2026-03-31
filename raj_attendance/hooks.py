@@ -157,7 +157,8 @@ doc_events = {
         "before_cancel": "raj_attendance.raj_attendance.attendance_cancel.remove_late_on_cancel",
     },
     "Employee Advance": {
-        "validate": "raj_attendance.raj_attendance.employee_advance_validation.validate_employee_advance"
+        # "validate": "raj_attendance.raj_attendance.employee_advance_validation.validate_employee_advance",
+        "before_submit": "raj_attendance.raj_attendance.employee_advance_validation.before_submit_employee_advance",
     }
 }
 

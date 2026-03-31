@@ -27,7 +27,11 @@ def validate_employee_advance(doc, method=None):
     # Only validate if advance_amount is set and positive
     if not doc.advance_amount or flt(doc.advance_amount) <= 0:
         return
-
+    
+    # ✅ If already approved/flagged for approval, skip limit validation
+    if doc.custom_require_approval:
+        return
+    
     # Get employee's shift and solaf type
     shift_name, solaf_type = _get_employee_shift_type(doc.employee)
 
@@ -391,3 +395,18 @@ def _get_allowed_advance_for_bracket(present_days):
     complete_brackets = present_days // DAYS_PER_BRACKET
 
     return flt(complete_brackets * ADVANCE_PER_7_DAYS, 2)
+
+def before_submit_employee_advance(doc, method=None):
+    """
+    Only allow submit if:
+    - custom_require_approval is 0 (normal, within limits), OR
+    - custom_require_approval is 1 AND current user has 'Advance Loan Approver' role
+    """
+    if doc.custom_require_approval:
+        if "Advance Loan Approver" not in frappe.get_roles(frappe.session.user):
+            frappe.throw(
+                _("This advance requires approval. Only users with the 'Advance Loan Approver' role can submit it.")
+                + "<br><br>"
+                + " 'Advance Loan Approver' هذه السلفة تتطلب موافقة. فقط مستخدمو دور ",
+                title=_("Approval Required") + " / مطلوبة موافقة"
+            )
