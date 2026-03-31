@@ -56,12 +56,17 @@ def double_salary(doc, method):
 	base = ssa.base or 0
  
 	if shift in DAILY_WORKER_SHIFTS:
-		# badal_wagba = ssa.custom_badal_wagba or 0
 		daily_rate = base
 	else:
 		daily_rate = base / payment_days
 
 	double_daily_rate = daily_rate * 2
+ 
+	badal_wagba = 0
+	if shift in DAILY_WORKER_SHIFTS:
+		badal_wagba = ssa.custom_badal_wagba
+		double_daily_rate = double_daily_rate + badal_wagba
+ 
 	amount = round(double_daily_rate, 2)
 
 	if amount <= 0:
@@ -94,9 +99,8 @@ def double_salary(doc, method):
 	if shift in DAILY_WORKER_SHIFTS:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"
-		# doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
-		# doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base + Badal & Wagba) : {round(daily_rate, 2)}\n\n"
-		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base) : {round(daily_rate, 2)}\n\n"
+		doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
+		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base*2 + Badal & Wagba) : {round(amount, 2)}\n\n"
 	else:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift or 'Admin'}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"
