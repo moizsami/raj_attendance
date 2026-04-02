@@ -62,10 +62,10 @@ def double_salary(doc, method):
 
 	double_daily_rate = daily_rate * 2
  
-	badal_wagba = 0
+	# badal_wagba = 0
 	if shift in DAILY_WORKER_SHIFTS:
-		badal_wagba = ssa.custom_badal_wagba
-		double_daily_rate = double_daily_rate + badal_wagba
+		# badal_wagba = ssa.custom_badal_wagba
+		double_daily_rate = base
  
 	amount = round(double_daily_rate, 2)
 
