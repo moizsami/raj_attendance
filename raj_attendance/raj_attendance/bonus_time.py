@@ -109,9 +109,9 @@ def calc_bonus(doc, method):
   
 		salary_component_value = ""
 		if shift_doc.custom_late_and_early_deduction_type == "Deduct":
-			salary_component_value = "Over Time / WORKERS"
+			salary_component_value = "Workers Over time"
 		else:
-			salary_component_value = "Over Time / ADMIN"
+			salary_component_value = "Admin Over time"
    
 		existing = frappe.db.exists("Additional Salary", {
 			"custom_attendance_record": doc.name,
