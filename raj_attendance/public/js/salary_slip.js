@@ -34,16 +34,25 @@ frappe.ui.form.on('Salary Slip', {
                     if (resp.message !== undefined) {
                         // Update the custom commission field in the UI
                         frm.set_value('custom_total_commissions', resp.message);
+                        // Add or update the Sales Commission component in the client-side earnings table
+                        let earnings = frm.doc.earnings || [];
+                        let row = earnings.find(d => d.salary_component === 'Sales Commission');
 
-                        // Force the server to recalculate salary components and net pay
-                        frappe.call({
-                            method: 'process_salary_based_on_working_days',
-                            doc: frm.doc,
-                            callback: function() {
-                                // Refresh the form to display the updated values
-                                frm.refresh();
+                        if (flt(resp.message) > 0) {
+                            // Add or update the row if commission has a value
+                            if (!row) {
+                                row = frm.add_child('earnings');
+                                row.salary_component = 'Sales Commission';
                             }
-                        });
+                            row.amount = resp.message;
+                        } else if (row) {
+                            // Remove the row if commission is 0 or empty
+                            frm.doc.earnings = frm.doc.earnings.filter(
+                                d => d.salary_component !== 'Sales Commission'
+                            );
+                        }
+
+                        frm.refresh_fields();
                     }
                 }
             });
