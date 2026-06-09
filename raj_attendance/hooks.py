@@ -159,7 +159,14 @@ doc_events = {
     "Employee Advance": {
         # "validate": "raj_attendance.raj_attendance.employee_advance_validation.validate_employee_advance",
         "before_submit": "raj_attendance.raj_attendance.employee_advance_validation.before_submit_employee_advance",
+    },
+    "Salary Slip": {
+        "before_validate": "raj_attendance.events.salary_slip.add_commission_to_salary_slip"
     }
+}
+
+doctype_js = {
+    "Salary Slip": "public/js/salary_slip.js",
 }
 
 
