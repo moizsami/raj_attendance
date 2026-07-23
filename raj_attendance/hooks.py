@@ -167,6 +167,7 @@ doc_events = {
 
 doctype_js = {
     "Salary Slip": "public/js/salary_slip.js",
+    "Payroll Entry": "public/js/payroll_entry.js",
 }
 
 
