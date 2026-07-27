@@ -161,7 +161,8 @@ doc_events = {
         "before_submit": "raj_attendance.raj_attendance.employee_advance_validation.before_submit_employee_advance",
     },
     "Salary Slip": {
-        "before_validate": "raj_attendance.events.salary_slip.add_commission_to_salary_slip"
+        "before_validate": "raj_attendance.events.salary_slip.add_commission_to_salary_slip",
+        "validate": "raj_attendance.raj_attendance.salary_slip_hooks.calculate_ignored_badal_wagba",
     }
 }
 
