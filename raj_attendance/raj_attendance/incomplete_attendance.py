@@ -12,6 +12,7 @@ def get_incomplete_attendance(start_date, end_date, employees):
         filters={
             "employee": ["in", employees],
             "attendance_date": ["between", [start_date, end_date]],
+            "status": ["!=", "Present"],
             "docstatus": ["!=", 2],
         },
         fields=["name", "employee", "employee_name", "attendance_date",
