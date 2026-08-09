@@ -99,8 +99,8 @@ def double_salary(doc, method):
 	if shift in DAILY_WORKER_SHIFTS:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"
-		doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
-		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base*2 + Badal & Wagba) : {round(amount, 2)}\n\n"
+		# doc_additional.custom_reason_of_deduct_or_earn += f"Badal & Wagba : {round(badal_wagba, 2)}\n"
+		doc_additional.custom_reason_of_deduct_or_earn += f"Daily Rate (Base) : {round(amount, 2)}\n\n"
 	else:
 		doc_additional.custom_reason_of_deduct_or_earn += f"Shift         : {shift or 'Admin'}\n"
 		doc_additional.custom_reason_of_deduct_or_earn += f"Base Salary   : {round(base, 2)}\n"
