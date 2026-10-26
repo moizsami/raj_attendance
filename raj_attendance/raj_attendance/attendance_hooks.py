@@ -1,6 +1,7 @@
 import frappe
 from frappe.utils import get_first_day, get_last_day, time_diff_in_seconds
 from datetime import datetime, timedelta
+import math
 
 DAILY_WORKER_SHIFTS = {
     "Daily Worker 12 Hours Night Shift",
@@ -9,6 +10,10 @@ DAILY_WORKER_SHIFTS = {
 }
 
 MONTHLY_MINUTE_LIMIT = 120
+
+# Admin deduction after the monthly limit: hourly rate = daily rate / HOURS_PER_DAY.
+# Late + early minutes of the day are rounded UP to whole hours (5 min = 1 hr, 61 min = 2 hrs).
+HOURS_PER_DAY = 8
 
 
 def _get_salary_assignment(employee):
@@ -46,6 +51,47 @@ def _calc_deduction_amount(early_minutes, late_minutes, amount_per_day):
     return round(amount_per_day, 2)
 
 
+def _calc_admin_deduction(ssa, early_minutes, late_minutes):
+    """
+    Admin policy: hourly_rate * ceil(total late/early hours).
+    Returns (amount, details dict) so the breakdown can be shown in the reason.
+    """
+    base = ssa.base or 0
+    payment_days = ssa.custom_payment_days or 30
+    daily_rate = base / payment_days if payment_days else 0
+    hourly_rate = daily_rate / HOURS_PER_DAY
+    total_minutes = round(early_minutes + late_minutes, 2)
+    billable_hours = math.ceil(total_minutes / 60) if total_minutes > 0 else 0
+    return round(hourly_rate * billable_hours, 2), {
+        "base": base,
+        "payment_days": payment_days,
+        "daily_rate": daily_rate,
+        "hourly_rate": hourly_rate,
+        "total_minutes": total_minutes,
+        "billable_hours": billable_hours,
+    }
+
+
+def _build_admin_reason(attendance_date, late_minutes, early_minutes, shift_start,
+                        shift_end, check_in, check_out, d, amount):
+    reason  = "Reason of Deduction (Late Check_In or Early Check_Out) - Admin Policy:\n\n"
+    reason += f"Attendance Date  : {attendance_date}\n\n"
+    reason += f"Shift Start Time : {shift_start}\n"
+    reason += f"Check In Time    : {check_in}\n"
+    reason += f"Came Late by     : {round(late_minutes, 1)} Minutes\n\n"
+    reason += f"Shift End Time   : {shift_end}\n"
+    reason += f"Check Out Time   : {check_out}\n"
+    reason += f"Left Early by    : {round(early_minutes, 1)} Minutes\n\n"
+    reason += "How it is calculated:\n"
+    reason += f"1. Daily rate    = Base Salary / Payment Days = {d['base']:,.2f} / {d['payment_days']} = {d['daily_rate']:,.2f}\n"
+    reason += f"2. Hourly rate   = Daily rate / {HOURS_PER_DAY} hours = {d['daily_rate']:,.2f} / {HOURS_PER_DAY} = {d['hourly_rate']:,.2f}\n"
+    reason += f"3. Total missed  = Late + Early = {round(late_minutes, 1)} + {round(early_minutes, 1)} = {d['total_minutes']} Minutes\n"
+    reason += f"4. Billable hrs  = {d['total_minutes']} min rounded UP to whole hours = {d['billable_hours']} Hour(s)\n"
+    reason += f"   (any part of an hour counts as a full hour: 5 min = 1 hr, 1h 10m = 2 hrs)\n"
+    reason += f"5. Deduction     = Hourly rate x Billable hrs = {d['hourly_rate']:,.2f} x {d['billable_hours']} = {amount:,.2f}\n"
+    return reason
+
+
 def _build_reason(attendance_date, late_minutes, early_minutes, shift_start, shift_end, check_in, check_out):
     reason  = "Reason of Deduction (Late Check_In or Early Check_Out):\n\n"
     reason += f"Attendance Date  : {attendance_date}\n\n"
@@ -71,8 +117,13 @@ def _insert_deduction(doc, shift_doc, attendance_date, late_minutes, early_minut
         return
 
     ssa = _get_salary_assignment(doc.employee)
-    amount_per_day = _calc_amount_per_day(ssa, doc.shift)
-    amount_to_deduct = _calc_deduction_amount(early_minutes, late_minutes, amount_per_day)
+    is_admin = shift_doc.custom_late_and_early_deduction_type != "Deduct"
+
+    if is_admin:
+        amount_to_deduct, details = _calc_admin_deduction(ssa, early_minutes, late_minutes)
+    else:
+        amount_per_day = _calc_amount_per_day(ssa, doc.shift)
+        amount_to_deduct = _calc_deduction_amount(early_minutes, late_minutes, amount_per_day)
 
     if amount_to_deduct <= 0:
         return
@@ -89,10 +140,16 @@ def _insert_deduction(doc, shift_doc, attendance_date, late_minutes, early_minut
     rec.amount                         = amount_to_deduct
     rec.payroll_date                   = attendance_date
     rec.custom_attendance_record       = doc.name
-    rec.custom_reason_of_deduct_or_earn = _build_reason(
-        attendance_date, late_minutes, early_minutes,
-        shift_start, shift_end, check_in, check_out
-    )
+    if is_admin:
+        rec.custom_reason_of_deduct_or_earn = _build_admin_reason(
+            attendance_date, late_minutes, early_minutes,
+            shift_start, shift_end, check_in, check_out, details, amount_to_deduct
+        )
+    else:
+        rec.custom_reason_of_deduct_or_earn = _build_reason(
+            attendance_date, late_minutes, early_minutes,
+            shift_start, shift_end, check_in, check_out
+        )
     rec.insert()
 
 
