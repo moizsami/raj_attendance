@@ -53,7 +53,8 @@ def _calc_deduction_amount(early_minutes, late_minutes, amount_per_day):
 
 def _calc_admin_deduction(ssa, early_minutes, late_minutes):
     """
-    Admin policy: hourly_rate * ceil(total late/early hours).
+    Admin policy: hourly_rate * ceil(deductible late/early hours).
+    The minutes passed in are only the part above the monthly allowance.
     Returns (amount, details dict) so the breakdown can be shown in the reason.
     """
     base = ssa.base or 0
@@ -73,7 +74,7 @@ def _calc_admin_deduction(ssa, early_minutes, late_minutes):
 
 
 def _build_admin_reason(attendance_date, late_minutes, early_minutes, shift_start,
-                        shift_end, check_in, check_out, d, amount):
+                        shift_end, check_in, check_out, d, amount, monthly_total=None):
     reason  = "Reason of Deduction (Late Check_In or Early Check_Out) - Admin Policy:\n\n"
     reason += f"Attendance Date  : {attendance_date}\n\n"
     reason += f"Shift Start Time : {shift_start}\n"
@@ -85,7 +86,10 @@ def _build_admin_reason(attendance_date, late_minutes, early_minutes, shift_star
     reason += "How it is calculated:\n"
     reason += f"1. Daily rate    = Base Salary / Payment Days = {d['base']:,.2f} / {d['payment_days']} = {d['daily_rate']:,.2f}\n"
     reason += f"2. Hourly rate   = Daily rate / {HOURS_PER_DAY} hours = {d['daily_rate']:,.2f} / {HOURS_PER_DAY} = {d['hourly_rate']:,.2f}\n"
-    reason += f"3. Total missed  = Late + Early = {round(late_minutes, 1)} + {round(early_minutes, 1)} = {d['total_minutes']} Minutes\n"
+    reason += f"3. Total missed  = Late + Early = {round(late_minutes, 1)} + {round(early_minutes, 1)} Minutes\n"
+    if monthly_total is not None:
+        reason += f"   Monthly total after this day = {monthly_total} Minutes (allowance {MONTHLY_MINUTE_LIMIT})\n"
+    reason += f"   Deductible (above allowance) = {d['total_minutes']} Minutes\n"
     reason += f"4. Billable hrs  = {d['total_minutes']} min rounded UP to whole hours = {d['billable_hours']} Hour(s)\n"
     reason += f"   (any part of an hour counts as a full hour: 5 min = 1 hr, 1h 10m = 2 hrs)\n"
     reason += f"5. Deduction     = Hourly rate x Billable hrs = {d['hourly_rate']:,.2f} x {d['billable_hours']} = {amount:,.2f}\n"
@@ -105,7 +109,8 @@ def _build_reason(attendance_date, late_minutes, early_minutes, shift_start, shi
 
 
 def _insert_deduction(doc, shift_doc, attendance_date, late_minutes, early_minutes,
-                       shift_start, shift_end, check_in, check_out):
+                       shift_start, shift_end, check_in, check_out,
+                       deductible_minutes=None, monthly_total=None):
     """Create and insert an Additional Salary deduction record."""
 
     # Duplicate guard
@@ -120,7 +125,8 @@ def _insert_deduction(doc, shift_doc, attendance_date, late_minutes, early_minut
     is_admin = shift_doc.custom_late_and_early_deduction_type != "Deduct"
 
     if is_admin:
-        amount_to_deduct, details = _calc_admin_deduction(ssa, early_minutes, late_minutes)
+        # Admin: only the minutes above the monthly allowance are deducted
+        amount_to_deduct, details = _calc_admin_deduction(ssa, 0, deductible_minutes)
     else:
         amount_per_day = _calc_amount_per_day(ssa, doc.shift)
         amount_to_deduct = _calc_deduction_amount(early_minutes, late_minutes, amount_per_day)
@@ -143,7 +149,8 @@ def _insert_deduction(doc, shift_doc, attendance_date, late_minutes, early_minut
     if is_admin:
         rec.custom_reason_of_deduct_or_earn = _build_admin_reason(
             attendance_date, late_minutes, early_minutes,
-            shift_start, shift_end, check_in, check_out, details, amount_to_deduct
+            shift_start, shift_end, check_in, check_out, details, amount_to_deduct,
+            monthly_total
         )
     else:
         rec.custom_reason_of_deduct_or_earn = _build_reason(
@@ -202,74 +209,65 @@ def create_new_record(doc, method):
         )
         return
 
-    # ── "Admin" type: accumulate monthly minutes ───────────────────────────────
+    # ── "Admin" type: always log every late / early leave, deduct only what is
+    #    above the monthly allowance (exactly, from the first minute over it) ──
     today_date = doc.attendance_date
     doc_name   = f"{doc.employee}:{get_first_day(today_date)}"
 
-    try:
-        exist_doc = frappe.get_doc("Employee Early Late Checkins", doc_name)
-        existed   = True
-    except Exception:
-        existed   = False
-        exist_doc = None
-
-    if existed:
-        # Already exceeded monthly limit → deduct immediately
-        if exist_doc.total_minutes >= MONTHLY_MINUTE_LIMIT:
-            if early_minutes + late_minutes <= 30:
-                return
-            # Set status AFTER the early return check
-            exist_doc.status = "monthly limit exceeded"
-            _insert_deduction(
-                doc, shift_doc, attendance_date,
-                late_minutes, early_minutes,
-                shift_start, shift_end, check_in, check_out
-            )
-            exist_doc.save()
-            return
-
-        # Accumulate into the monthly tracker
-        if late_seconds > 0:
-            exist_doc.total_minutes += round(late_minutes)
-            exist_doc.append("lates", {
-                "date": attendance_date,
-                "attendance": doc.name,
-                "difference": late_minutes,
-                "type": "Check In",
-            })
-        if early_seconds > 0:
-            exist_doc.total_minutes += round(early_minutes)
-            exist_doc.append("lates", {
-                "date": attendance_date,
-                "attendance": doc.name,
-                "difference": early_minutes,
-                "type": "Check Out",
-            })
-        exist_doc.save()
-
+    if frappe.db.exists("Employee Early Late Checkins", doc_name):
+        tracker = frappe.get_doc("Employee Early Late Checkins", doc_name)
     else:
-        # Create new monthly tracker
-        attend_doc = frappe.new_doc("Employee Early Late Checkins")
-        attend_doc.total_minutes    = 0
-        attend_doc.employee_id      = doc.employee
-        attend_doc.employee_name    = doc.employee_name
-        attend_doc.month_start_date = get_first_day(today_date)
-        attend_doc.month_end_date   = get_last_day(today_date)
+        tracker = frappe.new_doc("Employee Early Late Checkins")
+        tracker.total_minutes    = 0
+        tracker.employee_id      = doc.employee
+        tracker.employee_name    = doc.employee_name
+        tracker.month_start_date = get_first_day(today_date)
+        tracker.month_end_date   = get_last_day(today_date)
 
-        if late_seconds > 0:
-            attend_doc.total_minutes += round(late_minutes)
-            attend_doc.append("lates", {
-                "date": attendance_date,
-                "attendance": doc.name,
-                "difference": late_minutes,
-                "type": "Check In",
-            })
-        if early_seconds > 0:
-            attend_doc.total_minutes += round(early_minutes)
-            attend_doc.append("lates", {
-                "date": attendance_date,
-                "attendance": doc.name,
-                "difference": early_minutes,
-                "type": "Check Out",
-            })
-        attend_doc.insert()
+    # Already logged for this attendance (hook re-run) → nothing to do
+    if any(r.attendance == doc.name for r in tracker.lates):
+        return
+
+    old_total = tracker.total_minutes or 0
+    day_minutes = 0
+
+    if late_seconds > 0:
+        tracker.append("lates", {
+            "date": attendance_date,
+            "attendance": doc.name,
+            "difference": late_minutes,
+            "type": "Check In",
+        })
+        day_minutes += round(late_minutes)
+    if early_seconds > 0:
+        tracker.append("lates", {
+            "date": attendance_date,
+            "attendance": doc.name,
+            "difference": early_minutes,
+            "type": "Check Out",
+        })
+        day_minutes += round(early_minutes)
+
+    if not day_minutes:
+        return
+
+    new_total = old_total + day_minutes
+    tracker.total_minutes = new_total
+
+    # Minutes of this day that fall above the allowance
+    excess = new_total - max(old_total, MONTHLY_MINUTE_LIMIT)
+    if new_total >= MONTHLY_MINUTE_LIMIT:
+        tracker.status = "monthly limit exceeded"
+
+    if tracker.is_new():
+        tracker.insert()
+    else:
+        tracker.save()
+
+    if excess > 0:
+        _insert_deduction(
+            doc, shift_doc, attendance_date,
+            late_minutes, early_minutes,
+            shift_start, shift_end, check_in, check_out,
+            deductible_minutes=excess, monthly_total=new_total,
+        )
